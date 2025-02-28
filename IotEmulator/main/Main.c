@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <stdio.h>
+#include <string.h>
+#include <ESPNOW/espNow.h>
+#include <ESPNOW/EspNowHandler.h>
+#include <RFID/rfidmanager.h>
+#include "Main.h"
+
+#include <esp_timer.h>
+#include <IR/IRmanager.h>
+#include <Mqtt/MqttHandler.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
+
+static const char *TAG = "MAIN";
+
+QueueHandle_t xQueue = NULL; // Definir la variable global
+
+
+void process_task(void *pvParameter) {
+    command_t receivedCmd;
+    while (1) {
+        if (xQueueReceive(xQueue, &receivedCmd, portMAX_DELAY)) {
+            int64_t time = esp_timer_get_time(); // Tiempo en µs
+            switch (receivedCmd.cmd) {
+                case CMD_RFID:
+                    ESP_LOGI(TAG, "[%lld µs] Recibido RFID: %s", time, receivedCmd.data);
+                    publish_telemetry(receivedCmd.data, receivedCmd.data);
+                    break;
+                case CMD_IR:
+                    ESP_LOGI(TAG, "[%lld µs] Recibido IR: %s", time, receivedCmd.data);
+                    break;
+                case CMD_ESP_NOW:
+                    ESP_LOGI(TAG, "[%lld µs] Recibido ESP-NOW: %s", time, receivedCmd.data);
+                    break;
+                default:
+                    ESP_LOGW(TAG, "Comando desconocido");
+            }
+        }
+    }
+}
+
+void app_main(void) {
+    xQueue = xQueueCreate(10, sizeof(command_t));
+    if (xQueue == NULL) {
+        ESP_LOGE("MAIN", "Failed to create queue!");
+        return;
+    }
+
+    //initRF();
+    initRFID();
+    initMqtt();
+    ESP_ERROR_CHECK(init_wifi());
+    ESP_ERROR_CHECK(init_esp_now(receive));
+    ESP_ERROR_CHECK(register_peer(lcd));
+
+    xTaskCreate(executeReceiveRfid, "receiveRFID", 4096, NULL, 5, NULL);
+    xTaskCreate(executeReceiveIR, "receiveIR", 4096, NULL, 5, NULL);
+    xTaskCreate(process_task, "receiveRFID", 4096, NULL, 5, NULL);
+}
