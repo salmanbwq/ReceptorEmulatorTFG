@@ -9,8 +9,9 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 #include "ReceiveIR.h"
-#include <IR/IRmanager.h>
 
+#include <Main.h>
+#include <string.h>
 #define EXAMPLE_IR_RESOLUTION_HZ     1000000 // 1MHz resolution, 1 tick = 1us
 #define EXAMPLE_IR_RX_GPIO_NUM       13
 #define EXAMPLE_IR_NEC_DECODE_MARGIN 200     // Tolerance for parsing RMT symbols into bit stream
@@ -98,6 +99,7 @@ static bool nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols) {
     // save address and command
     s_nec_code_address = address;
     s_nec_code_command = command;
+
     return true;
 }
 
@@ -148,51 +150,86 @@ static void example_parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t s
 }
 
 
-void receiveIR() {
-    finished = false;
-    ESP_LOGI(IRRX, "create RMT RX channel");
-    rmt_rx_channel_config_t rx_channel_cfg = {
-        .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = EXAMPLE_IR_RESOLUTION_HZ,
-        .mem_block_symbols = 64, // cantidad de símbolos RMT que el canal puede almacenar a la vez
-        .gpio_num = EXAMPLE_IR_RX_GPIO_NUM,
-    };
-    rmt_channel_handle_t rx_channel = NULL;
-    ESP_ERROR_CHECK(rmt_new_rx_channel(&rx_channel_cfg, &rx_channel));
+void executeReceiveIR() {
+    static rmt_channel_handle_t rx_channel = NULL;
+    static QueueHandle_t receive_queue = NULL;
+    static bool initialized = false;
 
-    ESP_LOGI(IRRX, "register RX done callback");
-    QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
-    assert(receive_queue);
-    rmt_rx_event_callbacks_t cbs = {
-        .on_recv_done = example_rmt_rx_done_callback,
-    };
-    ESP_ERROR_CHECK(rmt_rx_register_event_callbacks(rx_channel, &cbs, receive_queue));
-    ESP_ERROR_CHECK(rmt_enable(rx_channel));
+    command_t command;
+    command.cmd = CMD_IR;
+
+    if (!initialized) {
+        ESP_LOGI(IRRX, "Initializing RMT RX channel...");
+        rmt_rx_channel_config_t rx_channel_cfg = {
+            .clk_src = RMT_CLK_SRC_DEFAULT,
+            .resolution_hz = EXAMPLE_IR_RESOLUTION_HZ,
+            .mem_block_symbols = 64,
+            .gpio_num = EXAMPLE_IR_RX_GPIO_NUM,
+        };
+
+        if (rmt_new_rx_channel(&rx_channel_cfg, &rx_channel) != ESP_OK) {
+            ESP_LOGE(IRRX, "Failed to create RMT RX channel");
+            vTaskDelete(NULL);
+            return;
+        }
+
+        receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
+        if (receive_queue == NULL) {
+            ESP_LOGE(IRRX, "Failed to create queue");
+            vTaskDelete(NULL);
+            return;
+        }
+
+        rmt_rx_event_callbacks_t cbs = {
+            .on_recv_done = example_rmt_rx_done_callback,
+        };
+        ESP_ERROR_CHECK(rmt_rx_register_event_callbacks(rx_channel, &cbs, receive_queue));
+
+        initialized = true;
+    }
 
     rmt_receive_config_t receive_config = {
         .signal_range_min_ns = 1250,
         .signal_range_max_ns = 12000000,
     };
 
-    rmt_symbol_word_t raw_symbols[64]; // 64 símbolos deberían ser suficientes para un marco NEC estándar
+    rmt_symbol_word_t raw_symbols[64];
     rmt_rx_done_event_data_t rx_data;
 
-    // Inicia la recepción
-    ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
-    // Espera recibir una señal o el timeout de 10 segundos
-    if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(20000)) == pdPASS) {
-        // Analiza los símbolos recibidos y muestra el resultado
-        example_parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
+    while (true) {
+        finished = false;
+        ESP_LOGI(IRRX, "Waiting for IR signal...");
+        ESP_ERROR_CHECK(rmt_enable(rx_channel));
 
-        ESP_LOGI(IRRX, "IR signal received and processed");
-    } else {
-        // Si no se recibe nada en 10 segundos, muestra un mensaje de timeout
-        ESP_LOGI(IRRX, "No IR signal received within 10 seconds, timing out");
+        ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+
+        if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(20000)) == pdPASS) {
+            example_parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
+
+            // Reservar memoria para el comando
+            char *commandToSend = malloc(15);
+            snprintf(commandToSend, 15, "%X/%X", s_nec_code_address, s_nec_code_command);
+            if (commandToSend != NULL) {
+                // Verificación de memoria
+
+                snprintf(command.data, sizeof(command.data), "%s", commandToSend);
+                xQueueSend(xQueue, &command, portMAX_DELAY);
+
+                free(commandToSend); // Liberar memoria después de usarla
+            } else {
+                command.data[0] = '\0';
+                ESP_LOGE(IRRX, "Memory allocation failed for commandToSend");
+            }
+
+            ESP_LOGI(IRRX, "IR signal received and processed");
+            finished = true;
+        } else {
+            ESP_LOGI(IRRX, "No IR signal received, continuing listening...");
+        }
+
+        ESP_ERROR_CHECK(rmt_disable(rx_channel));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
-    finished = true;
-    // Libera el canal RMT
-    ESP_ERROR_CHECK(rmt_disable(rx_channel));
-    ESP_ERROR_CHECK(rmt_del_channel(rx_channel));
 }
 
 

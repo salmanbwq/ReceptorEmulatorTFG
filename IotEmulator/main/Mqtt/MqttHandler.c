@@ -71,12 +71,14 @@ void publish_telemetry(char *temperature, char *humidity) {
     esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
     ESP_LOGI(TAG, "Telemetría enviada: %s", payload);
     log_to_mqtt(payload);
+
 }
 
 void mqtt_app_start(void) {
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = THINGSBOARD_SERVER,
         .credentials.username = ACCESS_TOKEN,
+        .session.keepalive = 120,
     };
 
     client = esp_mqtt_client_init(&mqtt_cfg);

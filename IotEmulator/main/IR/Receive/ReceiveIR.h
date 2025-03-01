@@ -4,12 +4,10 @@
 
 #ifndef RECEIVEIR_H
 #define RECEIVEIR_H
-#include <IR/IRmanager.h>
-static IrStatus *ir_status;
 
 static char *result;
 
-void receiveIR();
+void executeReceiveIR();
 
 char *getIRStatus();
 

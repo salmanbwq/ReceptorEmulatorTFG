@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdio.h>
 #include <string.h>
 #include <ESPNOW/espNow.h>
 #include <ESPNOW/EspNowHandler.h>
@@ -7,7 +6,9 @@
 #include "Main.h"
 
 #include <esp_timer.h>
-#include <IR/IRmanager.h>
+#include <DispositivesInterfaces/IRDevices/IRDevices.h>
+#include <DispositivesInterfaces/RFIDDevices/RFIDDevices.h>
+#include <IR/Receive/ReceiveIR.h>
 #include <Mqtt/MqttHandler.h>
 
 #include "freertos/FreeRTOS.h"
@@ -18,10 +19,11 @@
 
 static const char *TAG = "MAIN";
 
+
 QueueHandle_t xQueue = NULL; // Definir la variable global
 
 
-void process_task(void *pvParameter) {
+void process_task() {
     command_t receivedCmd;
     while (1) {
         if (xQueueReceive(xQueue, &receivedCmd, portMAX_DELAY)) {
@@ -29,10 +31,11 @@ void process_task(void *pvParameter) {
             switch (receivedCmd.cmd) {
                 case CMD_RFID:
                     ESP_LOGI(TAG, "[%lld µs] Recibido RFID: %s", time, receivedCmd.data);
-                    publish_telemetry(receivedCmd.data, receivedCmd.data);
+                    processRFIDCommand(receivedCmd.data);
                     break;
                 case CMD_IR:
                     ESP_LOGI(TAG, "[%lld µs] Recibido IR: %s", time, receivedCmd.data);
+                    processIRCommand(receivedCmd);
                     break;
                 case CMD_ESP_NOW:
                     ESP_LOGI(TAG, "[%lld µs] Recibido ESP-NOW: %s", time, receivedCmd.data);
@@ -41,6 +44,7 @@ void process_task(void *pvParameter) {
                     ESP_LOGW(TAG, "Comando desconocido");
             }
         }
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 

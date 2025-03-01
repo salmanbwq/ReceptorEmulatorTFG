@@ -82,7 +82,7 @@ void initRFID() {
     rc522_start(scanner);
 }
 
-void executeReceiveRfid(void *pvParameter) {
+void executeReceiveRfid() {
     while (1) {
         command_t command;
         command.cmd = CMD_RFID;
