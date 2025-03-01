@@ -65,14 +65,27 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 }
 
 // Función para publicar telemetría
-void publish_telemetry(char *temperature, char *humidity) {
+void publish_telemetry(char *temperature, char *humidity, char *topic) {
     char payload[100];
     snprintf(payload, sizeof(payload), "{\"device\": %s, \"state\": %s}", temperature, humidity);
     esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
     ESP_LOGI(TAG, "Telemetría enviada: %s", payload);
     log_to_mqtt(payload);
-
 }
+
+// Nueva función para enviar los datos de la TV correctamente
+void publish_tv_telemetry(bool power_status, int tv_channel, int tv_volume) {
+    char payload[150];
+
+    snprintf(payload, sizeof(payload),
+             "{\"power_status\": \"%s\", \"tv_channel\": %d, \"tv_volume\": %d}",
+             power_status ? "ON" : "OFF", tv_channel, tv_volume);
+
+    esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
+    ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
+    log_to_mqtt(payload);
+}
+
 
 void mqtt_app_start(void) {
     esp_mqtt_client_config_t mqtt_cfg = {
@@ -86,14 +99,6 @@ void mqtt_app_start(void) {
     esp_mqtt_client_start(client);
 }
 
-void telemetry_task(void *pvParameters) {
-    while (1) {
-        float temperature = 25.0 + (rand() % 10); // Simulación de temperatura
-        float humidity = 50.0 + (rand() % 10); // Simulación de humedad
-        publish_telemetry("habitacion.luz", "on");
-        vTaskDelay(pdMS_TO_TICKS(10000)); // Cada 10 segundos
-    }
-}
 
 void initMqtt(void) {
     ESP_LOGI(TAG, "Iniciando WiFi y ThingsBoard MQTT...");

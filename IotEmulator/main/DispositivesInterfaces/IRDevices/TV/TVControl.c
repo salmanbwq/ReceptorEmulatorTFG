@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
+#include <Mqtt/MqttHandler.h>
 
 static int tvChannel = 0;
 static int tvVolume = 0;
@@ -31,18 +32,23 @@ void processTVCommand(char command[50]) {
         case TV_ON_OFF:
             ESP_LOGI(TAG, "TV ON OFF command received");
             tvOn = !tvOn;
+            publish_tv_telemetry(tvOn, tvChannel, tvVolume);
             break;
         case TV_VOLUME_UP:
             ESP_LOGI(TAG, "TV VOLUME_UP command received");
             if (tvVolume < 10) {
                 tvVolume++;
             }
+
+            publish_tv_telemetry(tvOn, tvChannel, tvVolume);
             break;
         case TV_VOLUME_DOWN:
             ESP_LOGI(TAG, "TV VOLUME_DOWN command received");
             if (tvVolume > 0) {
                 tvVolume--;
             }
+
+            publish_tv_telemetry(tvOn, tvChannel, tvVolume);
             break;
         case TV_OK:
             ESP_LOGI(TAG, "TV OK command received");
@@ -54,6 +60,8 @@ void processTVCommand(char command[50]) {
             } else {
                 tvChannel++;
             }
+
+            publish_tv_telemetry(tvOn, tvChannel, tvVolume);
             break;
         case TV_CHANNEL_DOWN:
             if (tvChannel == 0) {
@@ -61,6 +69,8 @@ void processTVCommand(char command[50]) {
             } else {
                 tvChannel--;
             }
+
+            publish_tv_telemetry(tvOn, tvChannel, tvVolume);
             ESP_LOGI(TAG, "TV CHANNEL_DOWN command received");
             break;
         default:
