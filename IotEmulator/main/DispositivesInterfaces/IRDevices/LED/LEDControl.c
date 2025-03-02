@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
+#include <Mqtt/MqttHandler.h>
 
 static char *TAG = "LED Control";
 
@@ -33,10 +34,13 @@ void processLedCommand(char command[50]) {
         case LED_ON_OFF:
             ESP_LOGI(TAG, "LED ON OFF command received");
             ledON = !ledON;
+            publish_Lamp_telemetry(ledON, ledColor);
             break;
+
         case LED_CHANGE_COLOR:
             ESP_LOGI(TAG, "LED CHANGE_COLOR command received");
-            ledColor = (ledColor+1) % 3;
+            ledColor = (ledColor + 1) % 3;
+            publish_Lamp_telemetry(ledON, ledColor);
             break;
         default:
             ESP_LOGI(TAG, "Unknown command received");

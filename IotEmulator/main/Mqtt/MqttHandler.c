@@ -86,6 +86,29 @@ void publish_tv_telemetry(bool power_status, int tv_channel, int tv_volume) {
     log_to_mqtt(payload);
 }
 
+void publish_AC_telemetry(bool power_status, int temperature) {
+    char payload[150];
+
+    snprintf(payload, sizeof(payload),
+             "{\"acPowerStatus\": \"%s\", \"acTemperature\": %d}",
+             power_status ? "ON" : "OFF", temperature);
+
+    esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
+    ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
+    log_to_mqtt(payload);
+}
+
+void publish_Lamp_telemetry(bool power_status, int colour) {
+    char payload[150];
+
+    snprintf(payload, sizeof(payload),
+             "{\"lampPowerStatus\": \"%s\", \"lampColour\": %d}",
+             power_status ? "ON" : "OFF", colour);
+
+    esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
+    ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
+    log_to_mqtt(payload);
+}
 
 void mqtt_app_start(void) {
     esp_mqtt_client_config_t mqtt_cfg = {

@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
+#include <Mqtt/MqttHandler.h>
 
 static char *TAG = "A/C Control";
 
@@ -30,18 +31,23 @@ void processACCommand(char command[50]) {
         case AC_ON_OFF:
             ESP_LOGI(TAG, "AC ON OFF command received");
             acON = !acON;
+            publish_AC_telemetry(acON, acTemperature);
             break;
         case AC_TEMPERATURE_UP:
             ESP_LOGI(TAG, "AC temperature UP command received");
             if (acTemperature < 25) {
                 acTemperature++;
             }
+
+            publish_AC_telemetry(acON, acTemperature);
             break;
         case AC_TEMPERATURE_DOWN:
             ESP_LOGI(TAG, "AC temperature DOWN command received");
-            if (acTemperature < 18) {
+            if (acTemperature > 18) {
                 acTemperature--;
             }
+
+            publish_AC_telemetry(acON, acTemperature);
             break;
         default:
             ESP_LOGW(TAG, "Unknown command received");

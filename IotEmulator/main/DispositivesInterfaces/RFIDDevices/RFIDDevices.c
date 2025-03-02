@@ -14,7 +14,7 @@ static char *TAG = "RFID Devices";
 static RFIDDispositive getRFIDDispositive(const char *dispName) {
     if (strcmp(dispName, "Door") == 0) return ENTRANCE_DOOR;
     if (strcmp(dispName, "Alarm") == 0) return ALARM;
-    if (strcmp(dispName, "Storage") == 0) return STORAGE_LOCK;
+    if (strcmp(dispName, "Elevator") == 0) return Elevator;
     return UNKNOWN_RFID;
 }
 
@@ -53,7 +53,7 @@ void processRFIDCommand(char *receivedCmd) {
                 ESP_LOGE(TAG, "Alarm command check failed");
             }
             break;
-        case STORAGE_LOCK:
+        case Elevator:
             ESP_LOGI(TAG, "Storage lock command received");
             if (strcmp("hsmCj495)<<N", command) == 0) {
                 ESP_LOGI(TAG, "Storage lock command check success");
