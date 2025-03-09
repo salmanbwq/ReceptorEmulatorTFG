@@ -8,7 +8,6 @@
 
 typedef enum {
     ENTRANCE_DOOR,
-    ALARM,
     Elevator,
     UNKNOWN_RFID
 } RFIDDispositive;

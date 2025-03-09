@@ -7,8 +7,7 @@
 
 typedef enum {
     GARAGE_DOOR,
-    HEATER,
-    BLINDS,
+    ALARM,
     UNKNOWN_RF
 } RFDispositive;
 
@@ -19,23 +18,15 @@ typedef enum {
 } GarageDoorCommands;
 
 typedef enum {
-    HEATER_ON_OFF,
-    HEATER_UP,
-    HEATER_DOWN,
-    HEATER_UNKNOWN_COMMAND
-} HeaterCommands;
+    ALARM_ON,
+    ALARM_OFF,
+    ALARM_UNKNOWN_COMMAND
+} AlarmCommands;
 
-typedef enum {
-    BLINDS_UP,
-    BLINDS_DOWN,
-    BLINDS_UNKNOWN_COMMAND
-} BlindsCommands;
 
 GarageDoorCommands getGarageDoorCommands(const char *command);
 
-HeaterCommands getHeaterCommands(const char *command);
-
-BlindsCommands getBlindsCommands(const char *command);
+AlarmCommands getAlarmCommands(const char *command);
 
 RFDispositive getRFDispositive(const char *dispName);
 

@@ -7,14 +7,17 @@
 #include <esp_log.h>
 #include <Main.h>
 #include <string.h>
+#include <Mqtt/MqttHandler.h>
 
 static char *TAG = "RFID Devices";
+
+static bool doorStatus = false;
+static bool elevatorStatus = false;
 
 
 static RFIDDispositive getRFIDDispositive(const char *dispName) {
     if (strcmp(dispName, "Door") == 0) return ENTRANCE_DOOR;
-    if (strcmp(dispName, "Alarm") == 0) return ALARM;
-    if (strcmp(dispName, "Elevator") == 0) return Elevator;
+    if (strcmp(dispName, "Ascensor") == 0) return Elevator;
     return UNKNOWN_RFID;
 }
 
@@ -39,28 +42,31 @@ void processRFIDCommand(char *receivedCmd) {
     switch (getRFIDDispositive(dispositiveName)) {
         case ENTRANCE_DOOR:
             ESP_LOGI(TAG, "Entrance door command received");
-            if (strcmp("hsmCj495)<<N", command) == 0) {
+            if (strcmp("open", command) == 0) {
                 ESP_LOGI(TAG, "Door command check success, door opened");
+                doorStatus = true;
+            } else if (strcmp("close", command) == 0) {
+                ESP_LOGE(TAG, "Door command check success, door closed");
+                doorStatus = false;
             } else {
                 ESP_LOGE(TAG, "Door command check failed");
             }
-            break;
-        case ALARM:
-            ESP_LOGI(TAG, "Alarm command received");
-            if (strcmp("55vK=9|'d£b$", command) == 0) {
-                ESP_LOGI(TAG, "Alarm command check success, Disable alarm");
-            } else {
-                ESP_LOGE(TAG, "Alarm command check failed");
-            }
+            publishEntranceDoorStatus(doorStatus);
             break;
         case Elevator:
             ESP_LOGI(TAG, "Storage lock command received");
-            if (strcmp("hsmCj495)<<N", command) == 0) {
-                ESP_LOGI(TAG, "Storage lock command check success");
+            if (strcmp("open", command) == 0) {
+                ESP_LOGI(TAG, "Elevator command check success, opened");
+                elevatorStatus = true;
+            } else if (strcmp("close", command) == 0) {
+                ESP_LOGI(TAG, "Elevator command check success, closed");
+                elevatorStatus = false;
             } else {
                 ESP_LOGE(TAG, "Storage lock command check failed");
             }
+            publishElevatorStatus(elevatorStatus);
             break;
+
         default:
             ESP_LOGI(TAG, "Unknown dispositive received");
     }

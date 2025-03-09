@@ -12,6 +12,8 @@
 #include "nvs_flash.h"
 #include "espNow.h"
 
+#include <Mqtt/MqttHandler.h>
+
 #define ESP_CHANNEL 1
 
 //  ADDR ESP32
@@ -21,7 +23,7 @@
 static uint8_t peer_mac[ESP_NOW_ETH_ALEN] = {0x24, 0xdc, 0xc3, 0x49, 0x5e, 0x10};
 
 
- esp_err_t init_wifi(void) {
+esp_err_t init_wifi(void) {
     wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
 
     esp_netif_init();
@@ -32,6 +34,16 @@ static uint8_t peer_mac[ESP_NOW_ETH_ALEN] = {0x24, 0xdc, 0xc3, 0x49, 0x5e, 0x10}
     esp_wifi_start();
 
     ESP_LOGI("WIFI_INIT", "WIfi_init inicializado");
+    uint8_t mac[6];
+    esp_err_t ret = esp_read_mac(mac, ESP_MAC_WIFI_STA); // Modo estación (STA)
+
+    if (ret == ESP_OK) {
+        printf("📡 MAC del receptor: %02X:%02X:%02X:%02X:%02X:%02X\n",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    } else {
+        printf(" Error al obtener la dirección MAC\n");
+    }
+
     return ESP_OK;
 }
 
@@ -57,11 +69,20 @@ esp_err_t init_esp_now(esp_now_recv_cb_t recv) {
 }
 
 esp_err_t register_peer(uint8_t *peer_addr) {
-    esp_now_peer_info_t esp_now_peer_info = {};
-    memcpy(esp_now_peer_info.peer_addr, peer_mac, ESP_NOW_ETH_ALEN);
-    esp_now_peer_info.channel = ESP_CHANNEL;
-    esp_now_peer_info.ifidx = ESP_IF_WIFI_STA;
-    esp_now_add_peer(&esp_now_peer_info);
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, peer_addr, ESP_NOW_ETH_ALEN);
+
+    // 🔥 Usa el mismo canal de WiFi STA para evitar problemas
+    peerInfo.channel = 1;
+    peerInfo.ifidx = ESP_IF_WIFI_STA;
+    peerInfo.encrypt = false;
+
+    if (esp_now_is_peer_exist(peer_addr)) {
+        ESP_ERROR_CHECK(esp_now_mod_peer(&peerInfo));
+    } else {
+        ESP_ERROR_CHECK(esp_now_add_peer(&peerInfo));
+    }
+
+    ESP_LOGI("ESP-NOW", "Peer registrado en canal %d", getChannel());
     return ESP_OK;
 }
-

@@ -21,6 +21,22 @@
 #define LOG_TOPIC "v1/devices/me/logs"
 static const char *TAG = "THINGSBOARD";
 static esp_mqtt_client_handle_t client;
+uint8_t global_wifi_channel = 0; // Variable global para almacenar el canal WiFi
+
+void wifi_wait_for_connection() {
+    wifi_ap_record_t ap_info;
+    for (int i = 0; i < 10; i++) {
+        // Esperar hasta 10 intentos
+        if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+            global_wifi_channel = ap_info.primary;
+            ESP_LOGI("WIFI_INIT", "✅ WiFi conectado en canal %d", global_wifi_channel);
+            return;
+        }
+        ESP_LOGW("WIFI_INIT", "⚠️ Esperando a que WiFi esté completamente inicializado...");
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Espera 1 segundo antes de reintentar
+    }
+    ESP_LOGE("WIFI_INIT", "❌ No se pudo obtener el canal de WiFi.");
+}
 
 void wifi_init(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
@@ -34,12 +50,21 @@ void wifi_init(void) {
         .sta = {
             .ssid = WIFI_SSID,
             .password = WIFI_PASS,
+            .channel = 1,
         },
     };
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
+
+    // 🔥 Esperar conexión y obtener canal
+    wifi_wait_for_connection();
+}
+
+uint8_t getChannel() {
+    return global_wifi_channel;
 }
 
 void log_to_mqtt(const char *message) {
@@ -92,6 +117,31 @@ void publish_AC_telemetry(bool power_status, int temperature) {
     snprintf(payload, sizeof(payload),
              "{\"acPowerStatus\": \"%s\", \"acTemperature\": %d}",
              power_status ? "ON" : "OFF", temperature);
+
+    esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
+    ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
+    log_to_mqtt(payload);
+}
+
+void publishEntranceDoorStatus(bool status) {
+    char payload[150];
+
+    snprintf(payload, sizeof(payload),
+             "{\"doorStatus\": \"%s\"}",
+             status ? "Open" : "Closed");
+
+    esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
+    ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
+    log_to_mqtt(payload);
+}
+
+
+void publishElevatorStatus(bool status) {
+    char payload[150];
+
+    snprintf(payload, sizeof(payload),
+             "{\"elevatorStatus\": \"%s\"}",
+             status ? "Open" : "Closed");
 
     esp_mqtt_client_publish(client, MQTT_TOPIC, payload, 0, 1, 0);
     ESP_LOGI(TAG, "Datos de TV enviados: %s", payload);
