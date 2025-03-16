@@ -22,9 +22,9 @@ void receive(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int d
     char received_data[50];
     strncpy(received_data, (const char *) data, sizeof(received_data) - 1);
     received_data[sizeof(received_data) - 1] = '\0';
-    snprintf(cmd.data, sizeof(cmd.data), "ESP-NOW: %s", (char *) received_data);
+    snprintf(cmd.data, sizeof(cmd.data), "%s", (char *) received_data);
     xQueueSend(xQueue, &cmd, portMAX_DELAY);
-    vTaskDelete(NULL);
+    vTaskDelay(pdMS_TO_TICKS(50));
 }
 
 esp_err_t esp_now_send_data(const uint8_t *peer_addr, const uint8_t *data, size_t len) {

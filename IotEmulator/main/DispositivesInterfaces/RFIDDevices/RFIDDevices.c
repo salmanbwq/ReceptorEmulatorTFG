@@ -8,6 +8,7 @@
 #include <Main.h>
 #include <string.h>
 #include <Mqtt/MqttHandler.h>
+#include <Mqtt/MqttPublishMethods.h>
 
 static char *TAG = "RFID Devices";
 

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
 #include <Mqtt/MqttHandler.h>
+#include <Mqtt/MqttPublishMethods.h>
 
 static char *TAG = "A/C Control";
 

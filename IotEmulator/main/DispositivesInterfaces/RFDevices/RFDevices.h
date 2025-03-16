@@ -30,5 +30,7 @@ AlarmCommands getAlarmCommands(const char *command);
 
 RFDispositive getRFDispositive(const char *dispName);
 
+void processRFCommand(char *trama);
+
 
 #endif //RFDEVICES_H

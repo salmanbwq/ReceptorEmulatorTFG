@@ -7,6 +7,7 @@
 
 #include <esp_timer.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
+#include <DispositivesInterfaces/RFDevices/RFDevices.h>
 #include <DispositivesInterfaces/RFIDDevices/RFIDDevices.h>
 #include <IR/Receive/ReceiveIR.h>
 #include <Mqtt/MqttHandler.h>
@@ -39,6 +40,7 @@ void process_task() {
                     break;
                 case CMD_ESP_NOW:
                     ESP_LOGI(TAG, "[%lld µs] Recibido ESP-NOW: %s", time, receivedCmd.data);
+                    processRFCommand(receivedCmd.data);
                     break;
                 default:
                     ESP_LOGW(TAG, "Comando desconocido");
@@ -57,12 +59,10 @@ void app_main(void) {
 
     //initRF();
     initRFID();
-    initMqtt();
-    ESP_ERROR_CHECK(init_wifi());
-    ESP_ERROR_CHECK(init_esp_now(receive));
-    ESP_ERROR_CHECK(register_peer(lcd));
+    initMqtt(receive);
+
 
     xTaskCreate(executeReceiveRfid, "receiveRFID", 4096, NULL, 5, NULL);
     xTaskCreate(executeReceiveIR, "receiveIR", 4096, NULL, 5, NULL);
-    xTaskCreate(process_task, "receiveRFID", 4096, NULL, 5, NULL);
+    xTaskCreate(process_task, "processTask", 4096, NULL, 5, NULL);
 }

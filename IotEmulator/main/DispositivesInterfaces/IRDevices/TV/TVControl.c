@@ -9,6 +9,7 @@
 #include <string.h>
 #include <DispositivesInterfaces/IRDevices/IRDevices.h>
 #include <Mqtt/MqttHandler.h>
+#include <Mqtt/MqttPublishMethods.h>
 
 static int tvChannel = 0;
 static int tvVolume = 0;

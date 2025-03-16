@@ -4,11 +4,15 @@
 
 #ifndef MQTTHANDLER_H
 #define MQTTHANDLER_H
+#include <esp_now.h>
+#include <mqtt_client.h>
 #include <stdbool.h>
 #include <stdint.h>
 
+void initMqtt(esp_now_recv_cb_t recv);
 
-void publish_telemetry(char *temperature, char *humidity, char *topic);
+
+void log_to_mqtt(const char *message);
 
 void publish_tv_telemetry(bool power_status, int tv_channel, int tv_volume);
 
@@ -20,8 +24,9 @@ void publishEntranceDoorStatus(bool status);
 
 void publishElevatorStatus(bool status);
 
-void initMqtt(void);
+void publishGarageStatus(bool status);
 
-uint8_t getChannel();
+void publishAlarmStatus(bool status);
+
 
 #endif //MQTTHANDLER_H
